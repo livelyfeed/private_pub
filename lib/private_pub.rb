@@ -42,6 +42,28 @@ module PrivatePub
       http.start {|h| h.request(form)}
     end
 
+    # Sends multiple messages to the Faye server using Net::HTTP.
+    def publish_messages(messages)
+      raise Error, "No server specified, ensure private_pub.yml was loaded properly." unless config[:server]
+
+      if messages.size > 0
+        url = URI.parse(config[:server])
+
+        path = url.path.empty? ? '/' : url.path
+
+        http = Net::HTTP.new(url.host, url.port)
+        http.use_ssl = url.scheme == "https"
+        http.start do |h|
+          messages.each do |message|
+            form = Net::HTTP::Post.new(path)
+            form.set_form_data(:message => message.to_json)
+
+            h.request(form)
+          end
+        end
+      end
+    end
+
     # Returns a message hash for sending to Faye
     def message(channel, data)
       message = {:channel => channel, :data => {:channel => channel}, :ext => {:private_pub_token => config[:secret_token]}}
